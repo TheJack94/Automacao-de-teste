@@ -64,14 +64,18 @@ with webdriver.Chrome() as driver:
     due_date.send_keys(datetime.strftime(target_date, '%d/%m/%Y'))
     assignee = driver.find_element(By.ID, "assignee-field")
     assignee.click()
-    assignee.send_keys(Keys.BACKSPACE)
-    assignee.send_keys(Keys.BACKSPACE)
+    wait.until(presence_of_element_located((By.XPATH, "//div[contains(@class, 'aui-list-scroll')]")))
+    assignee.send_keys(Keys.BACK_SPACE)
     assignee.send_keys("Sem responsável")
     # Finalização da criação
+    wait.until(EC.text_to_be_present_in_element_value((By.ID, "assignee-field"), "Sem responsável"))
     driver.find_element(By.ID, "create-issue-submit").click()
     # Verificar fechamendo do diálogo
     wait.until_not(presence_of_element_located((By.ID, "summary")))
     # Abrir ticket criado
+    wait.until(presence_of_element_located((By.XPATH, "//button[contains(@class, 'aui-close-button')]")))
+    driver.find_element(By.XPATH, "//button[contains(@class, 'aui-close-button')]").click()
+    wait.until_not(EC.visibility_of_element_located((By.XPATH, "//button[contains(@class, 'aui-close-button')]")))
     searchBox = driver.find_element(By.ID, "quickSearchInput")
     searchBox.send_keys(ticketName)
     wait.until(presence_of_element_located((By.XPATH, "//li[@original-title='" + ticketName + "']")))
