@@ -1,49 +1,79 @@
+from datetime import datetime, timedelta
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import presence_of_element_located
+from selenium.webdriver.support import expected_conditions as EC
 
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 #This example requires Selenium WebDriver 3.13 or newer
 with webdriver.Chrome() as driver:
+    # Carregamento da página
     wait = WebDriverWait(driver, 120)
     driver.get("http://10.129.224.158:8081/secure/Dashboard.jspa")
-    driver.set_window_size(1382, 744)
+    driver.set_window_size(1200, 700)
+    # Login
     try:
+        # Login padrão
         driver.find_element(By.ID, "login-form-username").click()
         driver.find_element(By.ID, "login-form-username").send_keys("Especialista de Projeto")
         driver.find_element(By.ID, "login-form-password").send_keys("tester2021")
         driver.find_element(By.ID, "login").click()
     except:
-        first_result = wait.until(WebDriverWait(driver, timeout = 180),TimeoutError = "Timeout Bitch")   
-    try: 
-        first_result = wait.until(presence_of_element_located((By.ID, "create_link")))
-    except:
-        first_result = wait.until(WebDriverWait(driver, timeout = 1000),TimeoutError = "Timeout Bitch")
+        # Login quebra de sessão
+        driver.find_element(By.ID, "user-options").click()
+        wait.until(presence_of_element_located((By.ID, "login-form-username")))
+        driver.find_element(By.ID, "login-form-username").click()
+        driver.find_element(By.ID, "login-form-username").send_keys("Especialista de Projeto")
+        driver.find_element(By.ID, "login-form-password").send_keys("tester2021")
+        driver.find_element(By.ID, "login-form-submit").click()
+    # Detectar carregamento da página
+    wait.until(presence_of_element_located((By.ID, "create_link")))
+    # Iniciar novo ticket
     driver.find_element(By.ID, "create_link").click()
     element = driver.find_element(By.ID, "create_link")
     actions = ActionChains(driver, 120)
     actions.move_to_element(element).perform()
     element = driver.find_element(By.CSS_SELECTOR, "body")
     actions = ActionChains(driver,1000)
-    actions.move_to_element(element, 0, 0).perform()
-    driver.find_element(By.ID, "summary").click()
-    driver.find_element(By.ID, "summary").send_keys("TestePY2")
-    driver.find_element(By.CSS_SELECTOR, ".connect-react-select__placeholder").click()
-    driver.find_element(By.CSS_SELECTOR, ".connect-react-select__option--is-focused span").click()
+    actions.move_to_element(element).perform()
+    # Detectar carregamento do diálogo
+    wait.until(presence_of_element_located((By.ID, "summary")))
+    # Preenchimento dos campos
+    currentdate = datetime.today()
+    ticketName = "Teste criação e pesquisa - PY (" + datetime.strftime(currentdate, '%d-%m-%Y %H:%M') + ")"
+    summary = driver.find_element(By.ID, "summary")
+    summary.click()
+    summary.send_keys(ticketName)
+    activity_type = driver.find_element(By.ID, "customfield_20129")
+    activity_select = Select(activity_type)
+    activity_select.select_by_value("28512")
+    factory = driver.find_element(By.ID, "customfield_11102")
+    factory_select = Select(factory)
+    factory_select.select_by_value("29400")
+    initial_date = driver.find_element(By.ID, "customfield_10818")
+    initial_date.send_keys(datetime.strftime(currentdate, '%d/%m/%Y'))
+    due_date = driver.find_element(By.ID, "duedate")
+    target_date = currentdate + timedelta(30)
+    due_date.send_keys(datetime.strftime(target_date, '%d/%m/%Y'))
+    assignee = driver.find_element(By.ID, "assignee-field")
+    assignee.click()
+    assignee.send_keys(Keys.BACKSPACE)
+    assignee.send_keys(Keys.BACKSPACE)
+    assignee.send_keys("Sem responsável")
+    # Finalização da criação
     driver.find_element(By.ID, "create-issue-submit").click()
-    driver.find_element(By.LINK_TEXT, "PTI116-2384 - TestePY2").click()
-
-
-
-"""with webdriver.Chrome() as driver:
-    wait = WebDriverWait(driver, 10)
-    driver.get("https://google.com/ncr")
-    driver.find_element(By.NAME, "q").send_keys("cheese" + Keys.RETURN)
-    first_result = wait.until(presence_of_element_located((By.CSS_SELECTOR, "h3")))
-    print(first_result.get_attribute("textContent")) """
-
-  
+    # Verificar fechamendo do diálogo
+    wait.until_not(presence_of_element_located((By.ID, "summary")))
+    # Abrir ticket criado
+    searchBox = driver.find_element(By.ID, "quickSearchInput")
+    searchBox.send_keys(ticketName)
+    wait.until(presence_of_element_located((By.XPATH, "//li[@original-title='" + ticketName + "']")))
+    searchItem = driver.find_element(By.XPATH, "//li[@original-title='" + ticketName + "']")
+    searchItem.click()
